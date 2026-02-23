@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mineral Acquisition Agent</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --border: #222222;
+    --border-bright: #333333;
+    --text: #e8e8e8;
+    --text-dim: #666666;
+    --text-mid: #999999;
+    --green: #00ff88;
+    --green-dim: #00ff8820;
+    --green-mid: #00ff8860;
+    --amber: #ffb800;
+    --amber-dim: #ffb80015;
+    --red: #ff4444;
+    --red-dim: #ff444415;
+    --blue: #4488ff;
+    --blue-dim: #4488ff15;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  .header {
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 100;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: var(--green);
+    text-transform: uppercase;
+  }
+
+  .header-divider {
+    width: 1px;
+    height: 16px;
+    background: var(--border-bright);
+  }
+
+  .header-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text-mid);
+    letter-spacing: 0.05em;
+  }
+
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-dim);
+  }
+
+  .status-dot.active {
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* MAIN LAYOUT */
+  .main {
+    display: grid;
+    grid-template-columns: 280px 1fr 320px;
+    height: calc(100vh - 49px);
+  }
+
+  /* LEFT PANEL - Pipeline Steps */
+  .panel-left {
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+    overflow-y: auto;
+  }
+
+  .panel-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    padding: 0 20px 12px;
+  }
+
+  .step {
+    padding: 12px 20px;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: all 0.15s;
+    position: relative;
+  }
+
+  .step:hover {
+    background: #ffffff05;
+  }
+
+  .step.active {
+    border-left-color: var(--green);
+    background: var(--green-dim);
+  }
+
+  .step.complete {
+    border-left-color: var(--border-bright);
+  }
+
+  .step.running {
+    border-left-color: var(--amber);
+    background: var(--amber-dim);
+  }
+
+  .step.error {
+    border-left-color: var(--red);
+    background: var(--red-dim);
+  }
+
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+
+  .step-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    color: var(--text-dim);
+    width: 16px;
+  }
+
+  .step-icon {
+    font-size: 14px;
+    width: 20px;
+    text-align: center;
+  }
+
+  .step-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    flex: 1;
+  }
+
+  .step-status {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 2px;
+  }
+
+  .step-status.idle { color: var(--text-dim); }
+  .step-status.running { color: var(--amber); background: var(--amber-dim); }
+  .step-status.done { color: var(--green); background: var(--green-dim); }
+  .step-status.error { color: var(--red); background: var(--red-dim); }
+
+  .step-desc {
+    font-size: 11px;
+    color: var(--text-dim);
+    padding-left: 46px;
+    line-height: 1.5;
+  }
+
+  .step-connector {
+    width: 1px;
+    height: 12px;
+    background: var(--border);
+    margin: 0 20px 0 29px;
+  }
+
+  /* CENTER - Terminal/Log */
+  .panel-center {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .terminal-header {
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .terminal-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+  }
+
+  .run-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--bg);
+    background: var(--green);
+    border: none;
+    padding: 6px 16px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.15s;
+    font-weight: 600;
+  }
+
+  .run-btn:hover {
+    background: #00ffaa;
+  }
+
+  .run-btn:disabled {
+    background: var(--border-bright);
+    color: var(--text-dim);
+    cursor: not-allowed;
+  }
+
+  .terminal {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    line-height: 1.8;
+  }
+
+  .log-line {
+    display: flex;
+    gap: 12px;
+    opacity: 0;
+    animation: fadeIn 0.3s forwards;
+  }
+
+  @keyframes fadeIn {
+    to { opacity: 1; }
+  }
+
+  .log-time {
+    color: var(--text-dim);
+    min-width: 80px;
+    flex-shrink: 0;
+  }
+
+  .log-source {
+    min-width: 100px;
+    flex-shrink: 0;
+  }
+
+  .log-source.odnr { color: var(--blue); }
+  .log-source.auditor { color: var(--amber); }
+  .log-source.recorder { color: #cc88ff; }
+  .log-source.parser { color: #ff8844; }
+  .log-source.enrichment { color: #44ddff; }
+  .log-source.ghl { color: var(--green); }
+  .log-source.system { color: var(--text-dim); }
+  .log-source.error { color: var(--red); }
+
+  .log-msg { color: var(--text); flex: 1; }
+  .log-msg.dim { color: var(--text-mid); }
+  .log-msg.success { color: var(--green); }
+  .log-msg.warn { color: var(--amber); }
+  .log-msg.error { color: var(--red); }
+
+  .log-section {
+    border-top: 1px solid var(--border);
+    margin: 12px 0;
+    padding-top: 12px;
+  }
+
+  .log-section-label {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  /* RIGHT PANEL - Output */
+  .panel-right {
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 20px;
+  }
+
+  .output-section {
+    margin-bottom: 24px;
+  }
+
+  .output-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .permit-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 14px;
+    margin-bottom: 8px;
+  }
+
+  .permit-card.highlight {
+    border-color: var(--green);
+    background: var(--green-dim);
+  }
+
+  .card-field {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    font-size: 11px;
+  }
+
+  .card-key {
+    color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+  }
+
+  .card-val {
+    color: var(--text);
+    text-align: right;
+    max-width: 160px;
+    word-break: break-word;
+  }
+
+  .card-val.green { color: var(--green); font-weight: 500; }
+  .card-val.amber { color: var(--amber); }
+  .card-val.red { color: var(--red); }
+  .card-val.blue { color: var(--blue); }
+
+  .prospect-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 12px;
+    margin-bottom: 6px;
+    transition: all 0.2s;
+  }
+
+  .prospect-card.pushed {
+    border-color: var(--green);
+  }
+
+  .prospect-name {
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+
+  .prospect-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 2px;
+    letter-spacing: 0.05em;
+  }
+
+  .tag.county { background: #4488ff20; color: var(--blue); }
+  .tag.unleased { background: var(--red-dim); color: var(--red); }
+  .tag.acreage { background: #ffffff10; color: var(--text-mid); }
+  .tag.pushed { background: var(--green-dim); color: var(--green); }
+  .tag.well { background: #cc88ff20; color: #cc88ff; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .stat-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 12px;
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--green);
+    display: block;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-bright); }
+
+  .cursor {
+    display: inline-block;
+    width: 7px;
+    height: 12px;
+    background: var(--green);
+    animation: blink 1s infinite;
+    vertical-align: middle;
+    margin-left: 2px;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  .progress-bar {
+    height: 2px;
+    background: var(--border);
+    margin: 16px 0;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--green);
+    width: 0%;
+    transition: width 0.5s ease;
+    box-shadow: 0 0 8px var(--green);
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo">MineralAgent</div>
+    <div class="header-divider"></div>
+    <div class="header-title">Ohio Acquisition Pipeline · v0.1</div>
+  </div>
+  <div class="status-pill">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">IDLE</span>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- LEFT: Steps -->
+  <div class="panel-left">
+    <div class="panel-label">Pipeline Steps</div>
+
+    <div class="step" id="step1" onclick="selectStep(1)">
+      <div class="step-header">
+        <span class="step-num">01</span>
+        <span class="step-icon">📡</span>
+        <span class="step-name">ODNR Monitor</span>
+        <span class="step-status idle" id="status1">IDLE</span>
+      </div>
+      <div class="step-desc">Fetch Ohio permit data, diff against yesterday</div>
+    </div>
+    <div class="step-connector"></div>
+
+    <div class="step" id="step2" onclick="selectStep(2)">
+      <div class="step-header">
+        <span class="step-num">02</span>
+        <span class="step-icon">🗺️</span>
+        <span class="step-name">County Auditor</span>
+        <span class="step-status idle" id="status2">IDLE</span>
+      </div>
+      <div class="step-desc">Browser agent scrapes parcel owner + address</div>
+    </div>
+    <div class="step-connector"></div>
+
+    <div class="step" id="step3" onclick="selectStep(3)">
+      <div class="step-header">
+        <span class="step-num">03</span>
+        <span class="step-icon">📜</span>
+        <span class="step-name">Recorder Check</span>
+        <span class="step-status idle" id="status3">IDLE</span>
+      </div>
+      <div class="step-desc">CountyFusion search for existing leases</div>
+    </div>
+    <div class="step-connector"></div>
+
+    <div class="step" id="step4" onclick="selectStep(4)">
+      <div class="step-header">
+        <span class="step-num">04</span>
+        <span class="step-icon">📄</span>
+        <span class="step-name">Unit Parser</span>
+        <span class="step-status idle" id="status4">IDLE</span>
+      </div>
+      <div class="step-desc">Extract Exhibit 2 — find all unleased owners</div>
+    </div>
+    <div class="step-connector"></div>
+
+    <div class="step" id="step5" onclick="selectStep(5)">
+      <div class="step-header">
+        <span class="step-num">05</span>
+        <span class="step-icon">🔍</span>
+        <span class="step-name">Enrichment</span>
+        <span class="step-status idle" id="status5">IDLE</span>
+      </div>
+      <div class="step-desc">Verify address via PropStream, skip trace if needed</div>
+    </div>
+    <div class="step-connector"></div>
+
+    <div class="step" id="step6" onclick="selectStep(6)">
+      <div class="step-header">
+        <span class="step-num">06</span>
+        <span class="step-icon">✉️</span>
+        <span class="step-name">GHL Push</span>
+        <span class="step-status idle" id="status6">IDLE</span>
+      </div>
+      <div class="step-desc">Create contact, add tags, trigger mailer workflow</div>
+    </div>
+
+    <div style="margin: 24px 20px 0; border-top: 1px solid var(--border); padding-top: 16px;">
+      <div class="panel-label" style="padding: 0 0 12px;">Configuration</div>
+      <div style="font-size: 11px; color: var(--text-dim); line-height: 2;">
+        <div>Target County: <span style="color:var(--amber)">Guernsey, OH</span></div>
+        <div>Schedule: <span style="color:var(--text-mid)">Daily 6:00 AM</span></div>
+        <div>GHL Workflow: <span style="color:var(--text-mid)">Mineral Mailer v2</span></div>
+        <div>Skip Trace: <span style="color:var(--text-mid)">BatchSkipTrace</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER: Terminal -->
+  <div class="panel-center">
+    <div class="terminal-header">
+      <div class="terminal-title">AGENT LOG · REAL-TIME</div>
+      <button class="run-btn" id="runBtn" onclick="runPipeline()">▶ RUN PIPELINE</button>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div class="terminal" id="terminal">
+      <div class="log-line">
+        <span class="log-time">--:--:--</span>
+        <span class="log-source system">SYSTEM</span>
+        <span class="log-msg dim">Agent ready. Press RUN PIPELINE to simulate overnight job.</span>
+      </div>
+      <div class="log-line" style="margin-top: 8px;">
+        <span class="log-time">--:--:--</span>
+        <span class="log-source system">SYSTEM</span>
+        <span class="log-msg dim">Using real permit data: INR Ohio LLC · Guernsey County · Feb 10 2026</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Output -->
+  <div class="panel-right">
+    <div class="output-section">
+      <div class="output-label">Run Stats</div>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <span class="stat-num" id="statPermits">0</span>
+          <div class="stat-label">New Permits</div>
+        </div>
+        <div class="stat-box">
+          <span class="stat-num" id="statUnleased">0</span>
+          <div class="stat-label">Unleased Found</div>
+        </div>
+        <div class="stat-box">
+          <span class="stat-num" id="statContacts">0</span>
+          <div class="stat-label">GHL Contacts</div>
+        </div>
+        <div class="stat-box">
+          <span class="stat-num" id="statMailers">0</span>
+          <div class="stat-label">Mailers Queued</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="output-section" id="permitSection" style="display:none">
+      <div class="output-label">Permit Detected</div>
+      <div class="permit-card highlight">
+        <div class="card-field">
+          <span class="card-key">PERMIT #</span>
+          <span class="card-val green">34059247540000</span>
+        </div>
+        <div class="card-field">
+          <span class="card-key">OPERATOR</span>
+          <span class="card-val">INR Ohio LLC</span>
+        </div>
+        <div class="card-field">
+          <span class="card-key">WELL</span>
+          <span class="card-val">Stillion S 7HU</span>
+        </div>
+        <div class="card-field">
+          <span class="card-key">COUNTY</span>
+          <span class="card-val amber">Guernsey</span>
+        </div>
+        <div class="card-field">
+          <span class="card-key">FORMATION</span>
+          <span class="card-val">Utica Shale</span>
+        </div>
+        <div class="card-field">
+          <span class="card-key">UNIT ACRES</span>
+          <span class="card-val">615.035</span>
+        </div>
+        <div class="card-field">
+          <span class="card-key">FILED</span>
+          <span class="card-val amber">Feb 10, 2026</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="output-section" id="prospectsSection" style="display:none">
+      <div class="output-label">Unleased Prospects</div>
+      <div id="prospectsList"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const prospects = [
+  { name: "Clayton Lynn Williams & Regina Williams", acres: "0.3006", parcel: "35-0000039.000", address: "Unknown — skip trace needed", pushed: false, needsSkip: true },
+  { name: "Susan C. Delong & Dennis G. Delong", acres: "0.3540", parcel: "35-0000078.000", address: "Unknown — Chief's Order 2025-68", pushed: false, needsSkip: true },
+  { name: "Misty D. Pollock", acres: "0.0927", parcel: "35-0000252.000", address: "Cambridge OH 43725", pushed: false, needsSkip: false },
+  { name: "Norman L. Gunn", acres: "0.2127", parcel: "35-0000622.000", address: "Senecaville OH 43780", pushed: false, needsSkip: false },
+  { name: "Diana R. Potts", acres: "0.0156", parcel: "35-0000426.001", address: "Unknown — Chief's Order 2025-68", pushed: false, needsSkip: true },
+  { name: "George Nealey & Regina M. Sosak", acres: "0.3360", parcel: "35-0000098.000", address: "Caldwell OH 43724", pushed: false, needsSkip: false },
+  { name: "Heirs of Gordon Thompson", acres: "0.2993", parcel: "35-0000469.000", address: "Estate — probate research needed", pushed: false, needsSkip: true },
+  { name: "Beverly Tomolonis", acres: "0.3471", parcel: "35-0000290.000", address: "Unknown — Chief's Order 2025-68", pushed: false, needsSkip: true },
+  { name: "Donald McCloud Jr.", acres: "0.3471", parcel: "35-0000290.000", address: "Unknown — Chief's Order 2025-68", pushed: false, needsSkip: true },
+  { name: "Verizon North Inc.", acres: "0.0709", parcel: "35-0002939.000", address: "100 Sheldon Rd, Bldg 6, Buffalo NY", pushed: false, needsSkip: false },
+];
+
+let running = false;
+let currentStep = 0;
+
+function selectStep(n) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById('step' + n).classList.add('active');
+}
+
+function log(time, source, sourceClass, msg, msgClass = '') {
+  const terminal = document.getElementById('terminal');
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `
+    <span class="log-time">${time}</span>
+    <span class="log-source ${sourceClass}">${source}</span>
+    <span class="log-msg ${msgClass}">${msg}</span>
+  `;
+  terminal.appendChild(line);
+  terminal.scrollTop = terminal.scrollHeight;
+}
+
+function logSection(label) {
+  const terminal = document.getElementById('terminal');
+  const div = document.createElement('div');
+  div.className = 'log-section';
+  div.innerHTML = `<div class="log-section-label">${label}</div>`;
+  terminal.appendChild(div);
+}
+
+function setStep(n, state) {
+  const el = document.getElementById('step' + n);
+  const status = document.getElementById('status' + n);
+  el.className = 'step ' + state;
+  const labels = { idle: 'IDLE', running: 'RUNNING', done: 'DONE', error: 'ERROR' };
+  status.className = 'step-status ' + state;
+  status.textContent = labels[state] || state.toUpperCase();
+}
+
+function setProgress(pct) {
+  document.getElementById('progressFill').style.width = pct + '%';
+}
+
+function getTime(offset = 0) {
+  const d = new Date();
+  d.setSeconds(d.getSeconds() + offset);
+  return d.toTimeString().slice(0, 8);
+}
+
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+function animateStat(id, target) {
+  let current = 0;
+  const interval = setInterval(() => {
+    current++;
+    document.getElementById(id).textContent = current;
+    if (current >= target) clearInterval(interval);
+  }, 80);
+}
+
+async function runPipeline() {
+  if (running) return;
+  running = true;
+  document.getElementById('runBtn').disabled = true;
+  document.getElementById('statusDot').classList.add('active');
+  document.getElementById('statusText').textContent = 'RUNNING';
+
+  // Reset
+  document.getElementById('terminal').innerHTML = '';
+  document.getElementById('permitSection').style.display = 'none';
+  document.getElementById('prospectsSection').style.display = 'none';
+  document.getElementById('prospectsList').innerHTML = '';
+  ['statPermits','statUnleased','statContacts','statMailers'].forEach(id => {
+    document.getElementById(id).textContent = '0';
+  });
+  for (let i = 1; i <= 6; i++) setStep(i, 'idle');
+  setProgress(0);
+
+  const t = getTime;
+
+  // ── STEP 1: ODNR ──
+  logSection('STEP 1 — ODNR PERMIT MONITOR');
+  setStep(1, 'running'); selectStep(1);
+  await sleep(400);
+  log(t(), 'ODNR', 'odnr', 'Fetching oil-and-gas-wells dataset from ArcGIS...');
+  await sleep(600);
+  log(t(1), 'ODNR', 'odnr', 'Downloaded 847,234 records · 12.3 MB');
+  await sleep(400);
+  log(t(2), 'ODNR', 'odnr', 'Loading yesterday\'s snapshot for diff...');
+  await sleep(500);
+  log(t(2), 'ODNR', 'odnr', 'Comparing against 847,221 cached records...');
+  await sleep(600);
+  log(t(3), 'ODNR', 'odnr', '✓ 13 new permits detected statewide', 'success');
+  await sleep(300);
+  log(t(3), 'ODNR', 'odnr', 'Filtering for Guernsey County target area...');
+  await sleep(400);
+  log(t(4), 'ODNR', 'odnr', '✓ 1 new permit in target county: 34059247540000', 'success');
+  await sleep(300);
+  log(t(4), 'ODNR', 'odnr', 'Operator: INR Ohio LLC · Formation: Utica Shale · 615 acres');
+  setStep(1, 'done'); setProgress(16);
+  animateStat('statPermits', 1);
+  document.getElementById('permitSection').style.display = 'block';
+  await sleep(500);
+
+  // ── STEP 2: Auditor ──
+  logSection('STEP 2 — COUNTY AUDITOR LOOKUP');
+  setStep(2, 'running'); selectStep(2);
+  await sleep(400);
+  log(t(5), 'AUDITOR', 'auditor', 'Launching Stagehand browser session...');
+  await sleep(500);
+  log(t(5), 'AUDITOR', 'auditor', 'Navigating to auditor.guernseycounty.gov/Map');
+  await sleep(600);
+  log(t(6), 'AUDITOR', 'auditor', 'Locating permit coordinates: 39.958°N, 81.477°W');
+  await sleep(500);
+  log(t(7), 'AUDITOR', 'auditor', 'Clicking parcel at drill site coordinates...');
+  await sleep(700);
+  log(t(7), 'AUDITOR', 'auditor', '✓ Parcel 31-0002492.000 → STILLION JAMES H · 55.036 ac', 'success');
+  await sleep(400);
+  log(t(8), 'AUDITOR', 'auditor', 'Extracting mailing address...');
+  await sleep(400);
+  log(t(8), 'AUDITOR', 'auditor', '✓ Address: 14171 Clay Pike Rd, Senecaville OH 43780', 'success');
+  await sleep(300);
+  log(t(9), 'AUDITOR', 'auditor', 'Scanning surrounding parcels in drilling unit...');
+  await sleep(600);
+  log(t(9), 'AUDITOR', 'auditor', '8 additional parcels identified in unit boundary');
+  setStep(2, 'done'); setProgress(33);
+  await sleep(500);
+
+  // ── STEP 3: Recorder ──
+  logSection('STEP 3 — RECORDER LEASE CHECK');
+  setStep(3, 'running'); selectStep(3);
+  await sleep(400);
+  log(t(10), 'RECORDER', 'recorder', 'Connecting to countyfusion7.kofiletech.us...');
+  await sleep(500);
+  log(t(10), 'RECORDER', 'recorder', 'Searching: STILLION JAMES H · doc types: LEASES, DEEDS');
+  await sleep(700);
+  log(t(11), 'RECORDER', 'recorder', '⚠ Found: LEASE POOLING AGREEMENT · INR Ohio LLC · 09/19/2025', 'warn');
+  await sleep(300);
+  log(t(11), 'RECORDER', 'recorder', '⚠ Found: RIGHT OF WAY · Ohio Gathering Company · 04/07/2025', 'warn');
+  await sleep(400);
+  log(t(12), 'RECORDER', 'recorder', '→ STILLION JAMES H flagged as LEASED — skipping');
+  await sleep(500);
+  log(t(12), 'RECORDER', 'recorder', 'Unitization document detected: instrument 202500006302');
+  await sleep(400);
+  log(t(13), 'RECORDER', 'recorder', '→ Triggering unit parser for Exhibit 2 extraction...');
+  setStep(3, 'done'); setProgress(50);
+  await sleep(500);
+
+  // ── STEP 4: Parser ──
+  logSection('STEP 4 — UNIT DOCUMENT PARSER');
+  setStep(4, 'running'); selectStep(4);
+  await sleep(400);
+  log(t(13), 'PARSER', 'parser', 'Downloading 64-page unitization document...');
+  await sleep(600);
+  log(t(14), 'PARSER', 'parser', 'Locating Exhibit 2 — All Mineral Owners table...');
+  await sleep(500);
+  log(t(14), 'PARSER', 'parser', 'Extracting structured data from 527 owner rows...');
+  await sleep(800);
+  log(t(15), 'PARSER', 'parser', '✓ 527 total mineral owners in Stillion S Unit', 'success');
+  await sleep(400);
+  log(t(15), 'PARSER', 'parser', 'Filtering for Leased = "No" and Chief\'s Order 2025-68...');
+  await sleep(600);
+  log(t(16), 'PARSER', 'parser', `✓ ${prospects.length} unleased owners identified`, 'success');
+  await sleep(300);
+  prospects.forEach((p, i) => {
+    setTimeout(() => {
+      log(t(16), 'PARSER', 'parser', `  [${i+1}] ${p.name} · ${p.acres} ac`, p.needsSkip ? 'warn' : '');
+    }, i * 120);
+  });
+  await sleep(prospects.length * 120 + 400);
+  setStep(4, 'done'); setProgress(66);
+  animateStat('statUnleased', prospects.length);
+  document.getElementById('prospectsSection').style.display = 'block';
+
+  // Render prospect cards
+  const list = document.getElementById('prospectsList');
+  prospects.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'prospect-card';
+    card.id = 'prospect-' + p.name.replace(/\s/g,'_');
+    card.innerHTML = `
+      <div class="prospect-name">${p.name}</div>
+      <div class="prospect-meta">
+        <span class="tag county">Guernsey</span>
+        <span class="tag unleased">UNLEASED</span>
+        <span class="tag acreage">${p.acres} ac</span>
+        <span class="tag well">Stillion S</span>
+        ${p.needsSkip ? '<span class="tag" style="background:#ff884420;color:#ff8844">SKIP TRACE</span>' : ''}
+      </div>
+    `;
+    list.appendChild(card);
+  });
+  await sleep(600);
+
+  // ── STEP 5: Enrichment ──
+  logSection('STEP 5 — ADDRESS ENRICHMENT');
+  setStep(5, 'running'); selectStep(5);
+  await sleep(400);
+  log(t(17), 'ENRICH', 'enrichment', `Processing ${prospects.length} prospects through PropStream API...`);
+  await sleep(600);
+
+  let skipCount = 0;
+  for (let i = 0; i < prospects.length; i++) {
+    const p = prospects[i];
+    await sleep(200);
+    if (p.needsSkip) {
+      skipCount++;
+      log(t(17+i), 'ENRICH', 'enrichment', `[${i+1}] ${p.name.split(' ')[0]} — no address found → BatchSkipTrace queued`, 'warn');
+    } else {
+      log(t(17+i), 'ENRICH', 'enrichment', `[${i+1}] ${p.name.split(' ')[0]} — ✓ address verified: ${p.address}`, 'success');
+    }
+  }
+  await sleep(400);
+  log(t(18), 'ENRICH', 'enrichment', `✓ ${prospects.length - skipCount} addresses verified · ${skipCount} queued for skip trace`);
+  setStep(5, 'done'); setProgress(83);
+  await sleep(600);
+
+  // ── STEP 6: GHL ──
+  logSection('STEP 6 — GHL CONTACT PUSH');
+  setStep(6, 'running'); selectStep(6);
+  await sleep(400);
+  log(t(19), 'GHL', 'ghl', 'Authenticating with GoHighLevel API...');
+  await sleep(500);
+  log(t(19), 'GHL', 'ghl', `Pushing ${prospects.length - skipCount} verified contacts...`);
+  await sleep(400);
+
+  let pushed = 0;
+  for (let i = 0; i < prospects.length; i++) {
+    const p = prospects[i];
+    if (!p.needsSkip) {
+      await sleep(300);
+      pushed++;
+      log(t(20+i), 'GHL', 'ghl', `✓ Created: ${p.name} · tags: [guernsey, stillion-s, unleased, ${p.acres}ac]`, 'success');
+      const card = document.getElementById('prospect-' + p.name.replace(/\s/g,'_'));
+      if (card) {
+        card.classList.add('pushed');
+        card.querySelector('.prospect-meta').innerHTML += '<span class="tag pushed">IN GHL ✓</span>';
+      }
+    }
+  }
+
+  await sleep(400);
+  log(t(21), 'GHL', 'ghl', `✓ Triggering "Mineral Mailer v2" workflow for ${pushed} contacts...`, 'success');
+  await sleep(500);
+  log(t(21), 'GHL', 'ghl', `✓ ${pushed} mailers queued for next print run`, 'success');
+  setStep(6, 'done'); setProgress(100);
+
+  await sleep(300);
+  logSection('PIPELINE COMPLETE');
+  log(t(22), 'SYSTEM', 'system', `Run complete. ${pushed} contacts created. ${skipCount} skip traces pending.`, 'success');
+  log(t(22), 'SYSTEM', 'system', `Next run scheduled: tomorrow 06:00 AM`);
+
+  animateStat('statContacts', pushed);
+  animateStat('statMailers', pushed);
+
+  document.getElementById('statusDot').classList.remove('active');
+  document.getElementById('statusText').textContent = 'COMPLETE';
+  document.getElementById('runBtn').disabled = false;
+  document.getElementById('runBtn').textContent = '↺ RUN AGAIN';
+  running = false;
+}
+</script>
+</body>
+</html>
